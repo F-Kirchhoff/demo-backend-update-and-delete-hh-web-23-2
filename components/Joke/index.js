@@ -3,6 +3,21 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import JokeForm from "../JokeForm";
 import Link from "next/link";
+import useSWRMutation from "swr/mutation";
+
+async function sendRequest(url, { arg }) {
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(arg),
+  });
+
+  const data = await response.json();
+
+  console.log(data);
+}
 
 export default function Joke() {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -10,12 +25,27 @@ export default function Joke() {
   const { id } = router.query;
 
   const { data, isLoading } = useSWR(`/api/jokes/${id}`);
+  const { trigger } = useSWRMutation(`/api/jokes/${id}`, sendRequest);
 
-  function handleEdit(event) {
+  async function handleEdit(event) {
     event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const jokeData = Object.fromEntries(formData);
+
+    await trigger(jokeData);
+    setIsEditMode(false);
   }
 
-  async function handleDelete() {}
+  async function handleDelete() {
+    const response = await fetch(`/api/jokes/${id}`, {
+      method: "DELETE",
+    });
+
+    if (response.ok) {
+      router.push("/");
+    }
+  }
 
   if (isLoading) {
     return <h1>Loading...</h1>;
